@@ -562,7 +562,7 @@ elif st.session_state.page == 'crear':
 
     import calendar as _cal
 
-    MESES_ES = {
+    MESES_NOMBRES = {
         'enero':1,'febrero':2,'marzo':3,'abril':4,'mayo':5,'junio':6,
         'julio':7,'agosto':8,'septiembre':9,'octubre':10,'noviembre':11,'diciembre':12,
         'ene':1,'feb':2,'mar':3,'abr':4,'jun':6,'jul':7,'ago':8,'sep':9,'oct':10,'nov':11,'dic':12,
@@ -572,7 +572,7 @@ elif st.session_state.page == 'crear':
         t = texto.lower().strip()
         mes = None
         anio = date.today().year
-        for nombre_mes, num in sorted(MESES_ES.items(), key=lambda x: -len(x[0])):
+        for nombre_mes, num in sorted(MESES_NOMBRES.items(), key=lambda x: -len(x[0])):
             if nombre_mes in t:
                 mes = num
                 break
@@ -612,7 +612,7 @@ elif st.session_state.page == 'crear':
 
     if mes_det:
         fi_show, ft_show = fechas_del_mes(mes_det, anio_det)
-        nombre_mes_display = [k for k,v in MESES_ES.items() if v==mes_det and len(k)>3][0].capitalize()
+        nombre_mes_display = [k for k,v in MESES_NOMBRES.items() if v==mes_det and len(k)>3][0].capitalize()
         st.markdown(f'''
         <div style="background:#052e16;border:1px solid #10b981;border-radius:8px;
                     padding:10px 16px;margin-bottom:12px;font-size:13px;color:#6ee7b7">
