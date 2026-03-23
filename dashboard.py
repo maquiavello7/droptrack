@@ -122,6 +122,42 @@ def fmt_cop(v):
         return f"${v:,.2f}"
     except: return "$0"
 
+
+MESES_ES = {1:'ENE',2:'FEB',3:'MAR',4:'ABR',5:'MAY',6:'JUN',
+             7:'JUL',8:'AGO',9:'SEP',10:'OCT',11:'NOV',12:'DIC'}
+
+def fmt_fecha_mes(fecha_str):
+    """Convierte '15/03/2026' o '2026-03-15' → '15 MAR 2026'"""
+    try:
+        s = str(fecha_str).strip()
+        # Try dd/mm/yyyy
+        if '/' in s:
+            parts = s.split('/')
+            if len(parts) == 3:
+                d,m,y = int(parts[0]),int(parts[1]),int(parts[2][:4])
+                return f"{d:02d} {MESES_ES[m]} {y}"
+        # Try yyyy-mm-dd
+        if '-' in s and len(s) >= 10:
+            y,m,d = int(s[:4]),int(s[5:7]),int(s[8:10])
+            return f"{d:02d} {MESES_ES[m]} {y}"
+    except: pass
+    return fecha_str
+
+def fmt_mes_anio(fecha_str):
+    """Convierte fecha → 'MAR 2026'"""
+    try:
+        s = str(fecha_str).strip()
+        if '/' in s:
+            parts = s.split('/')
+            if len(parts) == 3:
+                m,y = int(parts[1]),int(parts[2][:4])
+                return f"{MESES_ES[m]} {y}"
+        if '-' in s and len(s) >= 10:
+            m,y = int(s[5:7]),int(s[:4])
+            return f"{MESES_ES[m]} {y}"
+    except: pass
+    return fecha_str
+
 def pct(n,d):
     try: return round(n/d*100,2) if d else 0
     except: return 0
@@ -295,7 +331,7 @@ SOLO_MOVIMIENTOS = {
 def fmt_dt(iso):
     try:
         d=datetime.fromisoformat(iso)
-        return d.strftime('%-d/%-m/%Y, %-I:%M %p').lower()
+        return f"{d.day} {MESES_ES[d.month]} {d.year}, {d.strftime('%-I:%M %p').lower()}"
     except: return iso or '—'
 
 def uid(): return str(uuid.uuid4())[:8]
@@ -427,7 +463,7 @@ if st.session_state.page == 'home':
 <div style="background:#1e293b;border:1.5px solid #334155;border-radius:16px;padding:20px 18px;margin-bottom:4px">
     <div style="font-size:16px;font-weight:800;color:#f1f5f9;margin-bottom:6px">{inf['title']}</div>
     <div style="font-size:11px;color:#475569;margin-bottom:6px">🌐 Público</div>
-    <div style="font-size:12px;color:#64748b;margin-bottom:2px">📅 {inf['date_from']} – {inf['date_to']}</div>
+    <div style="font-size:12px;color:#64748b;margin-bottom:2px">📅 {fmt_fecha_mes(inf['date_from'])} – {fmt_fecha_mes(inf['date_to'])}</div>
     <div style="font-size:12px;color:#64748b;margin-bottom:14px">🔄 {sync_str}</div>
     <div style="font-size:15px;font-weight:700;color:#e2e8f0;margin-bottom:2px">{total:,} ordenes</div>
     <div style="font-size:13px;color:#0ea5e9;font-weight:600;margin-bottom:12px">{desp} ({conf:.2f}%) Confirmación</div>
@@ -455,7 +491,7 @@ if st.session_state.page == 'home':
 <div style="background:#1e293b;border:1.5px solid #334155;border-radius:16px;padding:20px 18px;margin-bottom:4px">
     <div style="font-size:16px;font-weight:800;color:#f1f5f9;margin-bottom:6px">{inf['title']}</div>
     <div style="font-size:11px;color:#475569;margin-bottom:6px">🌐 Público</div>
-    <div style="font-size:12px;color:#64748b;margin-bottom:2px">📅 {inf['date_from']} – {inf['date_to']}</div>
+    <div style="font-size:12px;color:#64748b;margin-bottom:2px">📅 {fmt_fecha_mes(inf['date_from'])} – {fmt_fecha_mes(inf['date_to'])}</div>
     <div style="font-size:12px;color:#64748b;margin-bottom:14px">🔄 Sin sincronizar</div>
     <div style="height:72px;display:flex;align-items:center;justify-content:center;color:#334155;font-size:12px">
         Sincroniza para ver resultados
@@ -581,7 +617,7 @@ elif st.session_state.page == 'crear':
         <div style="background:#052e16;border:1px solid #10b981;border-radius:8px;
                     padding:10px 16px;margin-bottom:12px;font-size:13px;color:#6ee7b7">
             ✅ Mes detectado: <strong>{nombre_mes_display} {anio_det}</strong> —
-            fechas: {fi_show.strftime("%d/%m/%Y")} → {ft_show.strftime("%d/%m/%Y")}
+            fechas: {fi_show.day:02d} {MESES_ES[fi_show.month]} {fi_show.year} → {ft_show.day:02d} {MESES_ES[ft_show.month]} {ft_show.year}
         </div>''', unsafe_allow_html=True)
 
     with st.form("form_crear"):
@@ -655,7 +691,7 @@ elif st.session_state.page == 'detalle':
     <div class="det-header">
         <div>
             <div class="det-title">{inf['title']}</div>
-            <div class="det-meta">📅 {inf['date_from']} – {inf['date_to']}  ·  🔄 {sync_str}</div>
+            <div class="det-meta">📅 {fmt_fecha_mes(inf['date_from'])} – {fmt_fecha_mes(inf['date_to'])}  ·  🔄 {sync_str}</div>
         </div>
     </div>""", unsafe_allow_html=True)
 
@@ -951,7 +987,7 @@ elif st.session_state.page == 'detalle':
             if dd_det is not None and '_fecha_dt' in dd_det.columns and dd_det['_fecha_dt'].notna().any():
                 min_d = dd_det['_fecha_dt'].min()
                 max_d = dd_det['_fecha_dt'].max()
-                st.caption(f"📅 Fechas detectadas en Dropi: {min_d.strftime('%d/%m/%Y') if pd.notna(min_d) else '?'} → {max_d.strftime('%d/%m/%Y') if pd.notna(max_d) else '?'}  ·  Rango del informe: {inf['date_from']} – {inf['date_to']}")
+                st.caption(f"📅 Fechas detectadas en Dropi: {f"{min_d.day:02d} {MESES_ES[min_d.month]} {min_d.year}" if pd.notna(min_d) else '?'} → {f"{max_d.day:02d} {MESES_ES[max_d.month]} {max_d.year}" if pd.notna(max_d) else '?'}  ·  Rango: {fmt_fecha_mes(inf['date_from'])} – {fmt_fecha_mes(inf['date_to'])}")
             st.markdown("---")
             st.markdown("---")
             if st.button("🔄 Sincronizar ahora", key=f"run_sync_{inf['id']}", use_container_width=True):
@@ -973,7 +1009,7 @@ elif st.session_state.page == 'detalle':
                     d_filt_dated = d_filt[(d_filt['_fecha_dt']>=dF)&(d_filt['_fecha_dt']<=dT)]
                     if len(d_filt_dated) > 0:
                         d_filt = d_filt_dated
-                        st.info(f"📅 Filtro de fechas aplicado: {len(d_filt):,} filas de Dropi en el rango {inf['date_from']} – {inf['date_to']}")
+                        st.info(f"📅 Filtro de fechas aplicado: {len(d_filt):,} filas · {fmt_fecha_mes(inf['date_from'])} – {fmt_fecha_mes(inf['date_to'])}")
                     else:
                         # No hay filas en el rango — usar todo el archivo con aviso
                         st.warning(f"⚠️ No hay filas de Dropi en el rango {inf['date_from']} – {inf['date_to']}. "
@@ -2212,34 +2248,56 @@ elif st.session_state.page == 'detalle':
                 devolución la utilidad puede disminuir considerablemente.
             </div>''', unsafe_allow_html=True)
 
-        # Tabla de transacciones estilo Boostec
-        # Determinar órdenes con/sin recaudo usando TIPO DE ENVIO de Dropi
-        # Valores exactos: "CON RECAUDO" = contraentrega, "SIN RECAUDO" = pago anticipado
+        # Tabla de transacciones
+        # Para flete usar FINANCIERO (1 fila por orden, sin duplicados por upsell)
+        # Para TOTAL DE LA ORDEN y TIPO DE ENVIO usar logístico (tiene esas columnas)
         sin_recaudo_n   = 0
         sin_recaudo_val = 0.0
         fle_ent_cod     = fle_ent
         fle_ent_nocod   = 0.0
 
-        # Fuente de datos raw para display (dd_fin_raw o dd_raw_det, cargados en el expander)
-        raw_src_fin = raw_log  # logístico tiene TIPO DE ENVIO, TOTAL DE LA ORDEN, PRECIO FLETE
+        # Fuente: financiero para flete (sin duplicados), logístico para valor/tipo
+        raw_src_flete = raw_fin if raw_fin is not None else raw_log
+        raw_src_tipo  = raw_log  # logístico tiene TIPO DE ENVIO y TOTAL DE LA ORDEN
 
-        if raw_src_fin is not None:
+        if raw_src_flete is not None and raw_src_tipo is not None:
             try:
-                tipo_col = _raw_col_exact(raw_src_fin, ['TIPO DE ENVIO'])
-                est_col  = _raw_col_exact(raw_src_fin, ['ESTATUS'])
-                fle_col  = _raw_col_exact(raw_src_fin, ['PRECIO FLETE'])
-                val_col  = _raw_col_exact(raw_src_fin, ['TOTAL DE LA ORDEN'])
+                tipo_col = _raw_col_exact(raw_src_tipo,  ['TIPO DE ENVIO'])
+                est_col  = _raw_col_exact(raw_src_flete, ['ESTATUS'])
+                fle_col  = _raw_col_exact(raw_src_flete, ['PRECIO FLETE'])
+                val_col  = _raw_col_exact(raw_src_tipo,  ['TOTAL DE LA ORDEN'])
+                guia_fin = _raw_col_exact(raw_src_flete, ['NÚMERO GUIA','NUMERO GUIA'])
+                guia_log = _raw_col_exact(raw_src_tipo,  ['NÚMERO GUIA','NUMERO GUIA'])
 
-                if tipo_col and est_col:
-                    raw_ent_d = raw_src_fin[raw_src_fin[est_col].astype(str).str.upper().str.strip() == 'ENTREGADO']
-                    mask_recaudo = raw_ent_d[tipo_col].astype(str).str.upper().str.strip() == 'CON RECAUDO'
-                    mask_sinrec  = raw_ent_d[tipo_col].astype(str).str.upper().str.strip() == 'SIN RECAUDO'
+                if tipo_col and est_col and fle_col and guia_fin and guia_log:
+                    # Financiero: 1 fila por orden entregada
+                    fin_ent = raw_src_flete[raw_src_flete[est_col].astype(str).str.upper().str.strip()=='ENTREGADO'].copy()
+                    fin_ent['_guia_n'] = pd.to_numeric(fin_ent[guia_fin], errors='coerce')
+
+                    # Logístico: obtener TIPO DE ENVIO por guía (dedup)
+                    log_tipo = raw_src_tipo[[guia_log, tipo_col]].copy()
+                    log_tipo['_guia_n'] = pd.to_numeric(log_tipo[guia_log], errors='coerce')
+                    log_tipo = log_tipo.drop_duplicates('_guia_n')
+
+                    # Cruzar financiero con tipo de envío del logístico
+                    fin_ent = fin_ent.merge(log_tipo[['_guia_n', tipo_col]], on='_guia_n', how='left', suffixes=('','_log'))
+                    tipo_col_m = tipo_col if tipo_col in fin_ent.columns else tipo_col+'_log'
+
+                    mask_recaudo = fin_ent[tipo_col_m].astype(str).str.upper().str.strip() == 'CON RECAUDO'
+                    mask_sinrec  = fin_ent[tipo_col_m].astype(str).str.upper().str.strip() == 'SIN RECAUDO'
+
                     sin_recaudo_n = int(mask_sinrec.sum())
+                    fle_ent_cod   = float(pd.to_numeric(fin_ent[mask_recaudo][fle_col], errors='coerce').fillna(0).sum())
+                    fle_ent_nocod = float(pd.to_numeric(fin_ent[mask_sinrec][fle_col],  errors='coerce').fillna(0).sum())
+
+                    # Valor sin recaudo desde logístico
                     if val_col:
-                        sin_recaudo_val = float(pd.to_numeric(raw_ent_d[mask_sinrec][val_col], errors='coerce').fillna(0).sum())
-                    if fle_col:
-                        fle_ent_cod   = float(pd.to_numeric(raw_ent_d[mask_recaudo][fle_col], errors='coerce').fillna(0).sum())
-                        fle_ent_nocod = float(pd.to_numeric(raw_ent_d[mask_sinrec][fle_col],  errors='coerce').fillna(0).sum())
+                        log_ent = raw_src_tipo[raw_src_tipo[_raw_col_exact(raw_src_tipo,['ESTATUS'])].astype(str).str.upper().str.strip()=='ENTREGADO'] if _raw_col_exact(raw_src_tipo,['ESTATUS']) else pd.DataFrame()
+                        if not log_ent.empty:
+                            log_ent = log_ent.drop_duplicates(guia_log)
+                            log_ent['_guia_n'] = pd.to_numeric(log_ent[guia_log], errors='coerce')
+                            mask_sin_log = log_ent[tipo_col].astype(str).str.upper().str.strip() == 'SIN RECAUDO'
+                            sin_recaudo_val = float(pd.to_numeric(log_ent[mask_sin_log][val_col], errors='coerce').fillna(0).sum())
             except: pass
         elif 'tipo_envio' in df_ent.columns and df_ent['tipo_envio'].notna().any():
             mask_cod = df_ent['tipo_envio'].astype(str).str.upper().str.strip() == 'CON RECAUDO'
@@ -2786,7 +2844,18 @@ elif st.session_state.page == 'module':
             with rcols[0]:
                 orden_id = str(row.get('ID','') if 'ID' in row.index else idx)
                 st.markdown(f'<div style="font-size:11px;color:#64748b">ID</div><div style="font-size:13px;font-weight:700;color:#f1f5f9">{orden_id}</div>', unsafe_allow_html=True)
-                fn_txt = str(row[dc_fn]).strip() if dc_fn and str(row[dc_fn]).strip() not in ('nan','None','') else ''
+                fn_raw = str(row[dc_fn]).strip() if dc_fn and str(row[dc_fn]).strip() not in ('nan','None','') else ''
+                try:
+                    from datetime import datetime as _dt2
+                    if '/' in fn_raw:
+                        _p = fn_raw.split('/')
+                        fn_txt = f"{int(_p[0]):02d} {MESES_ES[int(_p[1])]} {_p[2][:4]}"
+                    elif '-' in fn_raw and len(fn_raw) >= 10:
+                        fn_txt = f"{int(fn_raw[8:10]):02d} {MESES_ES[int(fn_raw[5:7])]} {fn_raw[:4]}"
+                    else:
+                        fn_txt = fn_raw
+                except:
+                    fn_txt = fn_raw
                 if fn_txt:
                     st.markdown(f'<div style="font-size:10px;color:#64748b">F. Novedad: {fn_txt}</div>', unsafe_allow_html=True)
 
@@ -3129,7 +3198,7 @@ elif st.session_state.page == 'module':
             periodo_lbls = SEM_LBLS
         else:
             periodos     = dias_con_data
-            periodo_lbls = [str(d) for d in dias_con_data]
+            periodo_lbls = [f"{d.day:02d} {MESES_ES[d.month]}" for d in dias_con_data]
 
         # ── Manual inputs ──
         n_per = len(periodos)
@@ -3147,7 +3216,7 @@ elif st.session_state.page == 'module':
                     per_str = str(per)
                     saved = st.session_state[manual_key].get(per_str, {'transf': 0.0, 'pub': 0.0})
                     with col_i:
-                        st.markdown(f"<div style='font-size:11px;font-weight:700;color:#0ea5e9;text-align:center'>{lbl[-5:]}</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='font-size:11px;font-weight:700;color:#0ea5e9;text-align:center'>{lbl}</div>", unsafe_allow_html=True)
                         transf = st.number_input("Transf ($)", min_value=0.0,
                             value=float(saved['transf']), step=10000.0, format="%.0f",
                             key=f"fc_transf_{inf_fc['id']}_{per_str}", label_visibility="collapsed")
@@ -3228,21 +3297,20 @@ elif st.session_state.page == 'module':
             if is_pos:  return '#10b981'
             return '#f1f5f9'
 
-        col_w = max(110, 900 // max(len(periodos), 1))
+        col_w = max(120, 1000 // max(len(periodos), 1))
 
         html = f'''
-        <div style="overflow-x:auto;margin-bottom:16px">
-        <table style="width:100%;border-collapse:collapse;min-width:{col_w*(len(periodos)+2)}px">
+        <div style="overflow-x:auto;margin-bottom:16px;border-radius:8px;border:1px solid #1e293b">
+        <table style="width:100%;border-collapse:collapse;min-width:{max(800, col_w*(len(periodos)+2))}px">
         <thead>
-          <tr style="background:#0f172a">
-            <th style="text-align:left;padding:10px 14px;font-size:12px;color:#64748b;font-weight:700;min-width:200px;position:sticky;left:0;background:#0f172a;z-index:2">Concepto</th>
-            <th style="text-align:center;padding:10px 6px;font-size:11px;color:#0ea5e9;font-weight:700;min-width:50px">COP</th>'''
+          <tr style="background:#0f172a;border-bottom:2px solid #334155">
+            <th style="text-align:left;padding:10px 14px;font-size:12px;color:#94a3b8;font-weight:700;min-width:220px;position:sticky;left:0;background:#0f172a;z-index:2;border-right:1px solid #334155">Concepto</th>
+            <th style="text-align:center;padding:10px 6px;font-size:11px;color:#64748b;font-weight:700;min-width:45px">COP</th>'''
 
         for lbl in periodo_lbls:
-            lbl_short = lbl if tipo_flujo == "📅 Semanal" else str(lbl)[-5:]
-            html += f'<th style="text-align:right;padding:10px 8px;font-size:11px;color:#0ea5e9;font-weight:700;min-width:{col_w}px">{lbl_short}</th>'
+            html += f'<th style="text-align:right;padding:10px 8px;font-size:11px;color:#0ea5e9;font-weight:700;min-width:{col_w}px;white-space:nowrap">{lbl}</th>'
 
-        html += '<th style="text-align:right;padding:10px 10px;font-size:12px;color:#f1f5f9;font-weight:800;min-width:130px">TOTAL</th></tr></thead><tbody>'
+        html += '<th style="text-align:right;padding:10px 12px;font-size:12px;color:#f1f5f9;font-weight:800;min-width:140px;border-left:2px solid #334155">TOTAL</th></tr></thead><tbody>'
 
         for key, label, is_pos in FILAS:
             is_util = (key == 'utilidad')
