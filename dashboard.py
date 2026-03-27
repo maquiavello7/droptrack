@@ -1633,9 +1633,18 @@ elif st.session_state.page == 'detalle':
                                 pendPorFechaLite_s[fecha_k] = grp[cols_ok].head(200).to_dict('records')
                 except Exception as e_pf:
                     st.warning(f"⚠️ Error calculando pendientes por fecha: {e_pf}")
+                    pendPorFecha_s = {'_error': str(e_pf)}
 
-                # DEBUG — quitar después de verificar
-                st.info(f"🔍 SYNC DEBUG: pendPorFecha_s tiene {len(pendPorFecha_s)} fechas, total={sum(pendPorFecha_s.values()) if pendPorFecha_s else 0}, dd_raw_det={'SÍ' if dd_raw_det is not None else 'NO'} ({len(dd_raw_det) if dd_raw_det is not None else 0} filas)")
+                # DEBUG — guardar en snap para que sobreviva al st.rerun()
+                _pf_debug = {
+                    'dd_raw_det_exists': dd_raw_det is not None,
+                    'dd_raw_det_len': len(dd_raw_det) if dd_raw_det is not None else 0,
+                    'est_col': _pf_est_col if '_pf_est_col' in dir() else 'NOT_SET',
+                    'fec_col': _pf_fec_col if '_pf_fec_col' in dir() else 'NOT_SET',
+                    'guia_col': _pf_guia_col if '_pf_guia_col' in dir() else 'NOT_SET',
+                    'pendPorFecha_len': len(pendPorFecha_s),
+                    'pendPorFecha_total': sum(v for v in pendPorFecha_s.values() if isinstance(v, int)),
+                }
 
                 devSinNovLite_s=[]
                 try:
@@ -1712,7 +1721,8 @@ elif st.session_state.page == 'detalle':
                     'byDeptoFull':byDeptoFull_s,'byCarrierFull':byCarrierFull_s,
                     'novData':novData_s,'pendPorFecha':pendPorFecha_s,'pendPorFechaLite':pendPorFechaLite_s,
                     'devSinNovLite':devSinNovLite_s,'byVendedor':byVendedor_s,
-                    'byCarrierCiudad':byCarrierCiudad_s,'byCarrierDepto':byCarrierDepto_s})
+                    'byCarrierCiudad':byCarrierCiudad_s,'byCarrierDepto':byCarrierDepto_s,
+                    '_pf_debug':_pf_debug})
 
                 inf['history'].append(snap)
                 save_to_storage()
@@ -1853,7 +1863,13 @@ elif st.session_state.page == 'detalle':
             st.markdown(f'<div class="fin-section-title" style="font-size:15px">📅 Guías pendientes por fecha</div>', unsafe_allow_html=True)
 
             # DEBUG — quitar después de verificar
-            st.markdown(f"<small style='color:#f59e0b'>DEBUG pendPorFecha: {len(pendPorFecha)} fechas, keys={list(pendPorFecha.keys())[:5]}, sinFinal={snap.get('sinFinal',0)}</small>", unsafe_allow_html=True)
+            _dbg = snap.get('_pf_debug', {})
+            st.markdown(f"""<div style='color:#f59e0b;font-size:12px;background:#1e293b;padding:8px 12px;border-radius:6px;margin-bottom:8px'>
+            DEBUG pendPorFecha: {len(pendPorFecha)} fechas, sinFinal={snap.get('sinFinal',0)}<br>
+            SYNC: dd_raw_det={_dbg.get('dd_raw_det_exists','?')} ({_dbg.get('dd_raw_det_len','?')} filas),
+            est_col={_dbg.get('est_col','?')}, fec_col={_dbg.get('fec_col','?')}, guia_col={_dbg.get('guia_col','?')}<br>
+            result: {_dbg.get('pendPorFecha_len','?')} fechas, {_dbg.get('pendPorFecha_total','?')} total
+            </div>""", unsafe_allow_html=True)
 
             n_pend_fecha = sum(pendPorFecha.values()) if pendPorFecha else 0
             if n_pend_fecha > 0:
